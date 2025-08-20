@@ -1,176 +1,87 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Manga Watcher – VF/VA</title>
-  <meta name="theme-color" content="#111827" />
-  <style>
-    :root{
-      --bg:#0b1220;--panel:#111827;--muted:#6b7280;--text:#e5e7eb;--accent:#6366f1;--ok:#10b981;--warn:#f59e0b;--err:#ef4444;
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b1220,#0a0f1a);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
-    .wrap{max-width:720px;margin:0 auto;padding:24px}
-    .card{background:var(--panel);border:1px solid #1f2937;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    .p{padding:20px}
-    h1{font-size:26px;margin:0 0 8px}
-    p{color:var(--muted)}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    input[type="text"]{flex:1;min-width:180px;background:#0b1325;color:var(--text);border:1px solid #1f2937;border-radius:12px;padding:12px 14px;font-size:16px;outline:none}
-    button{background:var(--accent);border:0;color:white;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    .results{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
-    .option{background:#0b1325;border:1px solid #1f2937;border-radius:12px;padding:10px;cursor:pointer}
-    .option:hover{border-color:#374151}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid #1f2937;background:#0b1325;color:var(--muted);font-size:13px}
-    .grid{display:grid;grid-template-columns:1fr;gap:14px}
-    @media(min-width:640px){.grid{grid-template-columns:1fr 1fr}}
-    .stat{background:#0b1325;border:1px solid #1f2937;border-radius:16px;padding:16px}
-    .stat h3{margin:0;font-size:15px;color:var(--muted)}
-    .big{font-size:32px;font-weight:800;margin:4px 0 2px}
-    .small{font-size:12px;color:var(--muted)}
-    .loading{opacity:.8;animation:pulse 1.2s ease-in-out infinite}
-    @keyframes pulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
-    .error{color:var(--err)}
-    .footer{margin-top:18px;color:var(--muted);font-size:12px;display:flex;gap:8px;flex-wrap:wrap}
-    a{color:#93c5fd;text-decoration:none}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manga News</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; padding: 20px; }
+        h1 { text-align: center; }
+        input, select, button { padding: 10px; margin: 5px 0; width: 100%; max-width: 400px; }
+        #results { margin-top: 20px; }
+        .chapter { background: #fff; padding: 10px; margin-bottom: 5px; border-radius: 5px; }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card p">
-      <h1>📚 Manga Watcher – VF / VA</h1>
-      <p>Entre un nom de manga pour voir le dernier chapitre disponible en <b>VF (fr)</b> et en <b>VA (en)</b>. Active les notifications pour être prévenu des sorties.</p>
-      <div class="row" id="searchRow">
-        <input id="q" placeholder="Ex: One Piece, Jujutsu Kaisen, Frieren…" />
-        <button id="go">Rechercher</button>
-        <button id="notifBtn">🔔 Notifications</button>
-      </div>
-      <div id="alt" class="footer"></div>
-      <div id="choices" class="results"></div>
-      <div id="out" style="margin-top:14px"></div>
-    </div>
-    <div class="footer">Données via l'API publique <span class="pill">MangaDex</span>. Cette page est locale (aucun serveur).</div>
-  </div>
+    <h1>Manga News</h1>
+    <input type="text" id="mangaName" placeholder="Nom du manga">
+    <select id="lang">
+        <option value="en">VA (anglais)</option>
+        <option value="fr">VF (français)</option>
+    </select>
+    <button onclick="searchManga()">Rechercher</button>
+    <div id="results"></div>
 
-<script>
-const $ = (s)=>document.querySelector(s);
-const api = 'https://api.mangadex.org';
+    <script>
+        async function searchManga() {
+            const mangaName = document.getElementById('mangaName').value.trim();
+            const lang = document.getElementById('lang').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = "Recherche en cours...";
 
-const fmtDate = (iso)=>{
-  if(!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
-};
+            if (!mangaName) {
+                resultsDiv.innerHTML = "Veuillez entrer un nom de manga.";
+                return;
+            }
 
-async function searchManga(title){
-  const url = new URL(api + '/manga');
-  url.searchParams.set('title', title);
-  url.searchParams.set('limit', '8');
-  const r = await fetch(url);
-  if(!r.ok) throw new Error('Recherche impossible');
-  const j = await r.json();
-  return (j.data||[]).map(x=>({
-    id:x.id,
-    title:x.attributes?.title?.en || x.attributes?.title?.fr || Object.values(x.attributes?.title||{})[0] || 'Sans titre',
-  }));
-}
+            try {
+                // Utilisation du proxy CORS
+                const proxy = 'https://corsproxy.io/?';
+                // Recherche du manga
+                const searchResponse = await fetch(`${proxy}https://api.mangadex.org/manga?title=${encodeURIComponent(mangaName)}&limit=1`);
+                const searchData = await searchResponse.json();
 
-async function latestFor(mangaId, lang){
-  const url = new URL(api+`/manga/${mangaId}/feed`);
-  url.searchParams.append('translatedLanguage[]', lang);
-  url.searchParams.set('limit','1');
-  url.searchParams.set('order[createdAt]','desc');
-  url.searchParams.set('includeEmptyPages','0');
-  const r = await fetch(url);
-  if(!r.ok) throw new Error('Lecture feed échouée');
-  const j = await r.json();
-  const it = (j.data||[])[0];
-  if(!it) return null;
-  const a = it.attributes||{};
-  return {
-    id: it.id,
-    chapter: a.chapter || a.title || '—',
-    createdAt: a.createdAt || a.publishAt || a.readableAt || null,
-  };
-}
+                if (!searchData.data || searchData.data.length === 0) {
+                    resultsDiv.innerHTML = "Manga non trouvé.";
+                    return;
+                }
 
-async function selectManga(m){
-  $('#choices').innerHTML='';
-  const out = $('#out');
-  out.innerHTML = `<div class="grid">
-    <div class="stat loading"><h3>Dernier chapitre VF</h3><div class="big">…</div></div>
-    <div class="stat loading"><h3>Dernier chapitre VA</h3><div class="big">…</div></div>
-  </div>`;
+                const mangaId = searchData.data[0].id;
 
-  try{
-    const [fr,en] = await Promise.all([
-      latestFor(m.id,'fr'),
-      latestFor(m.id,'en')
-    ]);
-    out.innerHTML = `<div class="stat" style="margin-bottom:10px">
-        <div><div class="small">Manga sélectionné</div>
-        <div style="font-size:18px;font-weight:800">${m.title}</div></div>
-      </div>
-      <div class="grid">
-        ${renderStat('VF', fr)}
-        ${renderStat('VA', en)}
-      </div>`;
+                // Récupérer le dernier chapitre
+                const chapterResponse = await fetch(`${proxy}https://api.mangadex.org/chapter?manga=${mangaId}&translatedLanguage[]=${lang}&order[chapter]=desc&limit=1`);
+                const chapterData = await chapterResponse.json();
 
-    // Notification si nouveau chapitre
-    if(Notification.permission === "granted"){
-      if(fr) new Notification(`Nouveau chapitre VF de ${m.title}`, {body:`Chapitre ${fr.chapter}`, icon:"https://mangadex.org/favicon.ico"});
-      if(en) new Notification(`Nouveau chapitre VA de ${m.title}`, {body:`Chapitre ${en.chapter}`, icon:"https://mangadex.org/favicon.ico"});
-    }
-  }catch(e){
-    out.innerHTML = `<div class="error">Erreur : ${e.message}</div>`;
-  }
-}
+                if (!chapterData.data || chapterData.data.length === 0) {
+                    resultsDiv.innerHTML = "Aucun chapitre trouvé pour cette langue.";
+                    return;
+                }
 
-function renderStat(label, data){
-  if(!data){
-    return `<div class="stat"><h3>Dernier chapitre ${label}</h3><div class="big">—</div><div class="small">Aucune sortie trouvée</div></div>`;
-  }
-  return `<div class="stat">
-    <h3>Dernier chapitre ${label}</h3>
-    <div class="big">Ch. ${data.chapter}</div>
-    <div class="small">Mis en ligne : ${fmtDate(data.createdAt)}</div>
-  </div>`;
-}
+                const chapter = chapterData.data[0].attributes;
+                const chapterNumber = chapter.chapter || "Special/Extra";
 
-async function handleSearch(){
-  const q = $('#q').value.trim();
-  const alt = $('#alt');
-  const choices = $('#choices');
-  const out = $('#out');
-  if(!q){ out.innerHTML = '<div class="error">Entre un titre.</div>'; return;}
-  $('#go').disabled = true;
-  alt.textContent = 'Recherche…';
-  choices.innerHTML=''; out.innerHTML='';
-  try{
-    const list = await searchManga(q);
-    if(list.length === 0){ alt.innerHTML = '<span class="error">Aucun manga trouvé.</span>'; return;}
-    await selectManga(list[0]);
-  }catch(e){
-    alt.innerHTML = `<span class="error">${e.message}</span>`;
-  }finally{ $('#go').disabled = false; }
-}
+                resultsDiv.innerHTML = `<div class="chapter">
+                    <strong>${searchData.data[0].attributes.title.en || mangaName}</strong><br>
+                    Dernier chapitre (${lang === 'fr' ? 'VF' : 'VA'}): ${chapterNumber}<br>
+                    Sorti le: ${new Date(chapter.publishAt).toLocaleDateString()}
+                </div>`;
 
-// Notifications
-$('#notifBtn').addEventListener('click', ()=>{
-  if(Notification.permission === "granted"){
-    alert("Notifications déjà activées ✅");
-  }else if(Notification.permission !== "denied"){
-    Notification.requestPermission().then(p=>{
-      if(p==="granted") alert("Notifications activées !");
-    });
-  }else{
-    alert("Notifications bloquées dans le navigateur ⚠️");
-  }
-});
+                // Notification
+                if ("Notification" in window && Notification.permission !== "denied") {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === "granted") {
+                            new Notification("Manga News", {
+                                body: `Dernier chapitre de ${mangaName} : ${chapterNumber} (${lang === 'fr' ? 'VF' : 'VA'})`
+                            });
+                        }
+                    });
+                }
 
-$('#go').addEventListener('click', handleSearch);
-$('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') handleSearch(); });
-</script>
+            } catch (err) {
+                console.error(err);
+                resultsDiv.innerHTML = "Erreur lors de la récupération des données.";
+            }
+        }
+    </script>
 </body>
 </html>
