@@ -23,6 +23,13 @@
     <div id="results"></div>
 
     <script>
+        async function fetchWithProxy(url) {
+            const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+            return JSON.parse(data.contents);
+        }
+
         async function searchManga() {
             const mangaName = document.getElementById('mangaName').value.trim();
             const lang = document.getElementById('lang').value;
@@ -35,12 +42,8 @@
             }
 
             try {
-                // Utilisation du proxy CORS
-                const proxy = 'https://corsproxy.io/?';
                 // Recherche du manga
-                const searchResponse = await fetch(`${proxy}https://api.mangadex.org/manga?title=${encodeURIComponent(mangaName)}&limit=1`);
-                const searchData = await searchResponse.json();
-
+                const searchData = await fetchWithProxy(`https://api.mangadex.org/manga?title=${encodeURIComponent(mangaName)}&limit=1`);
                 if (!searchData.data || searchData.data.length === 0) {
                     resultsDiv.innerHTML = "Manga non trouvé.";
                     return;
@@ -49,9 +52,7 @@
                 const mangaId = searchData.data[0].id;
 
                 // Récupérer le dernier chapitre
-                const chapterResponse = await fetch(`${proxy}https://api.mangadex.org/chapter?manga=${mangaId}&translatedLanguage[]=${lang}&order[chapter]=desc&limit=1`);
-                const chapterData = await chapterResponse.json();
-
+                const chapterData = await fetchWithProxy(`https://api.mangadex.org/chapter?manga=${mangaId}&translatedLanguage[]=${lang}&order[chapter]=desc&limit=1`);
                 if (!chapterData.data || chapterData.data.length === 0) {
                     resultsDiv.innerHTML = "Aucun chapitre trouvé pour cette langue.";
                     return;
